@@ -1,0 +1,176 @@
+python 预测分析
+
+1.两种方法
+单一的回归
+集成多种方法
+
+2.理解数据
+遗失值插补imputation：用每行所有此项的平均值代替缺失值
+np.mean() 平均值
+np.std()     方差
+np.percentile(array, n%) 计算array中，n%位置的数
+
+创建一个key为给定list，value为（0，1，2，……）的辞典
+catDict = dict(zip(list(unique),range(len(unique))))
+
+probplot画图
+stats.probplot(colData, dist="norm", plot=pylab)
+pylab.show()
+
+
+分层抽样：
+大多数二元决策树算法可以处理的类别是有限多的。如果太多，需要合并。
+如果某个类别样本太少，随机抽样时可能取不到，这时需要合并或者增加样本，这叫做分层抽样。
+
+pandas读取csv并且获取summary
+rocksVMines = pd.read_csv(target_url,header=None, prefix="V")
+summary = rocksVMines.describe()
+
+
+平行坐标图
+dataRow.plot(color=pcolor, alpha=0.5)
+散点图
+matplotlib.pyplot.scatter(dataRow2, dataRow21)
+
+皮尔逊相关系数
+Pearson’s correlation ceofficient
+
+热度图heat map 列出所有的相关系数
+箱线图box plots 四分位数
+
+归一化noramlization
+    abaloneNormalized.iloc[:,i:(i + 1)] = (
+                    abaloneNormalized.iloc[:,i:(i + 1)] - mean) / sd
+    labelColor = (abalone.iloc[i,8] - minRings) / (maxRings - minRings)
+
+分对数转换：将很大的负数映射成0，很大的正数映射成1，0映射成0.5
+logit transform(x) = 1/(1+e^(-x))
+
+3.预测模型构建
+数值：回归
+评估回归模型性能
+均方误差MSE：mean square error = (1/m)sigma(y-pred(x))^2
+平均绝对误差MAE：mean absolute error = (1/m)sigma|y-pred(x)|
+
+类别：2分类，多分类
+评估分类模型性能
+
+行比列少，或者相对简单的问题，倾向于使用线性模型
+行比列多，或者相对复杂的问题，倾向于使用非线性模型
+
+如果MSE同目标方差几乎相等，
+或者RMSE同目标标准差几乎相等，说明预测算法效果并不好。
+因为直接对目标求平均值几乎能达到同样的效果。
+查看分布直方图、箱线图对分析错误非常有用。
+
+sklearn线性回归
+rocksVMinesModel = sklearn.linear_model.LinearRegression()最小二乘法
+rocksVMinesModel.fit(xTrain,yTrain)
+rocksVMinesModel.predict(xTrain)
+sklearn.metrics.roc_curve
+sklearn.metrics.auc
+fpr, tpr, thresholds = roc_curve(yTrain,trainingPredictions)
+roc_auc = auc(fpr, tpr)
+
+
+ROC receiver operating characteristic
+（FPR，TPR）的曲线
+AUC 曲线下面积
+
+最小二乘法的改进（避免过度拟合）：向前逐步回归 岭回归
+向前逐步回归：先找到效果最佳的那一列，然后找和它组合效果最佳的一列。
+岭回归：（惩罚系数回归）使系数变小，而不是把系数设为零。
+惩罚力度参数alpha一般按照10的倍数递减，但取值需要自己验证
+alphaList = [0.1**i for i in [0,1, 2, 3, 4, 5, 6]]
+linear_model.Ridge(alpha=alph)
+
+
+4.惩罚线性回归模型
+有用的系数惩罚项：
+1.最小二乘法，只会在训练集上最小化错误，容易带来过拟合。
+惩罚线性回归方法，在各种问题上性能可靠，尤其对样本并不明显多于属性的矩阵，或者非常稀疏的矩阵。
+2.套索（least absolute shrinkage and selection operator 最小绝对值收敛和选择算子 Lasso）回归，
+Manhattan距离—出租车的几何路径或者L1正则化
+岭回归使用平方和进行惩罚，而套索使用绝对值的加和。
+3.最小角度回归（Least Angle Regression LARS）算法：改进的向前逐步回归算法，如果属性跟残差有正关联，那么小幅度增加关联系数；如果是负关联，那么小幅度减小关联系数。
+4.ElasticNet集成了套索惩罚（绝对值加和）和岭惩罚（平方和），引入了一个参数alpha控制两者的比例
+5.Glmnet算法
+在ElasticNet基础上在加了一个参数lamda
+
+二分类情况，将两个类别直接替换为0和1
+或者使用输出的似然函数来定义分类，也叫做逻辑回归
+多分类的情况，使用1对所有或者1对其余来转化成二分类问题。
+加入分类数-1个列，对于添加的1列，取某个值时为1，其他为0，其他列类推。
+
+base expand:添加原始属性的变换：幂、对数、三角函数
+
+
+5.惩罚线性方法的预测模型
+sklearn.linear_model算法包
+sklearn.linear_model.ElasticNet      用于计算系数曲线
+sklearn.linear_model.ElasticNetCV 通过交叉验证，生成对ElasticNet模型性能的样本外估计
+经验：一定要做归一化，可是适当做基扩展
+MSE对于回归问题是合理的，但对分类问题不合理，
+对分类问题，我们度量性能有两种方法：1 计算误分类样本所占比例 2 AUC
+要计算这些指标，需要访问交叉验证种每一分数据，获取预测值和实际值，所以也不能用现成的交叉验证包，需要自己写循环
+
+alphas, coefs, _ = enet_path(xTrain, labelTrain, l1_ratio=0.8, fit_intercept=False, return_models=False)
+l1_ratio 决定了系数绝对值和的惩罚项占所有惩罚项的权重比例 l1_ratio=0.8表示使用80%的绝对值和以及20%的均方误差和 
+
+错误代价权重，比如把水雷误分类为岩石，比把岩石误分类成水雷代价大（根据roc_curve的输出混淆矩阵）
+
+
+
+6.集成方法
+上层算法：投票（bagging）、提升（boosting）、随机森林（random forest）
+基学习器（base learner） 二元决策树
+
+创建一个决策树模型
+wineTree = DecisionTreeRegressor(max_depth=3)
+wineTree.fit(xList, labels)
+with open("wineTree.dot", 'w') as f:
+    f = tree.export_graphviz(wineTree, out_file=f)
+
+1层的决策树：遍历整个x，找到sse最小的那个分割点split point
+如果有多个属性，对每个属性检查所有的分割点，比较后找到最小的。
+应该设置多少层，也需要循环。
+
+
+自举(bootstrap)集成(aggregation)：
+Bagging算法事故第二层次的算法，它定义了一系列子问题，每个子问题由基学习器来解决，最终预测结果取基学习器的平均值。
+这些子问题是从原始训练数据中采用自举取样产生的。random.sample
+Bagging方法可以减少单个二元决策树的误差。为了保证效果，决策树需要有足够的深度。
+Bagging方法可以作为集成方法的入门介绍，但是梯度提升法（gradient boosting）和随机森林（random forest）效果优于bagging，所以bagging并不常用。
+
+梯度提升法（gradient boosting）：
+与bagging的根本差异在于持续检测自己的累积误差，然后使用残差进行后续训练。
+
+
+随机森林（random forest）:
+随机森林是对bagging方法和属性随机选择方法的结合。
+选择随机属性世纪上是对二元决策树基学习器的修正。虽然看上去不是本质上的，但是给予了随机森林差异与bagging和梯度提升法的不同的性能特性。
+研究结果建议，随机森林更适合广泛稀疏的属性空间，比如文本挖掘问题。
+随机森林更易于并行化，因为基学习器可以单独训练，但是梯度提升法不行，它依赖于前一个基学习器的结果。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
